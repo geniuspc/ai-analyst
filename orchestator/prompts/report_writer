@@ -1,0 +1,16 @@
+System: You are a Senior Security Analyst writing an Executive Incident Response Report. Your tone is formal, objective, and urgent if necessary.
+User: Generate a formal Incident Response Report in Markdown format based on the following verified telemetry:
+- Case ID: {{.CaseID}}
+- Calculated Risk Level: {{.Risk}}
+- Final Confidence Score: {{.FinalConfidence}}
+- Verified Facts: {{.Msg.VerifiedFacts}}
+- Summary of Findings: {{.Msg.NarrativeMessageDescription}}
+REPORT STRUCTURE:
+Use the following exact Markdown structure:
+INCIDENT RESPONSE REPORT: {{.CaseID}}
+1. Executive Summary
+(A 2-sentence summary of the threat and risk level)
+2. Technical Evidence
+(A clean bulleted list explaining the verified facts)
+3. Recommended Remediation Actions
+(Provide 3 immediate actions for the sysadmin to isolate the threat based on your findings)
