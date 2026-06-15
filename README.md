@@ -11,19 +11,27 @@ The platform is engineered as a decoupled microservices architecture. All compon
 The ingestion gateway of the platform, responsible for secure artifact reception, metadata extraction, and initial pipeline triggering.
 - Responsibilities:
 Multipart Stream Processing: Accepts heavy forensic artifacts (memory dumps and log packages) via a managed HTTP API with built-in size restrictions (up to 20 GB).
+
 Artifact Type Detection: Automatically fingerprints incoming evidence by tracking file signatures, magic bytes, and entropy metrics (allowing the identification of raw dumps missing standard headers).
+
 Integrity & Chain of Custody Control: Computes cryptographic SHA-256 checksums to guarantee evidence non-repudiation and performs immediate validation of Linux images via kernel banner scanning.
+
 State Initialization: Registers new cases within the global state repository and publishes the initial activation token to the messaging bus.
 # Vol3-Service
 A high-performance forensic processing worker designed to bridge raw binary data streams with structured analytical backend engines.
 
 Responsibilities:
 Thread Pool Concurrency Management: Controls a multi-threaded task queue executor, spinning up parallel low-level analysis tasks without blocking system resources.
+
 Volatility 3 Automation: Programmatically orchestrates and parses execution data from core Linux memory analysis plugins:
 linux.pslist / linux.cmdline – Extracts active process trees and execution arguments.
+
 linux.bash – Recovers shell execution history directly from volatile memory.
+
 linux.netstat – Maps active, dormant, and hidden network sockets.
+
 linux.lsmod – Scans loaded kernel modules to detect hidden rootkits.
+
 linux.malfind – Pinpoints code injections in unbacked memory regions.
 
 Result Caching: serializes and stores structured JSON plugin outputs into Redis with unique, case-specific keys to eliminate redundant execution overhead.
@@ -33,8 +41,11 @@ The centralized analytical engine of the platform, managing investigation logic,
 
 Responsibilities:
 Hypothesis Tracker: Aggregates findings from various forensic layers and computes live confidence levels for distinct threat vectors, such as Rootkit installation or Lateral Movement.
+
 Concurrency Protection: Implements distributed locking patterns via Redis (SETNX) to ensure single-worker case processing and eliminate race conditions.
+
 Uncertainty Resolution (Self-Correction): Monitors the telemetry output delta. If the metric gap between competing top hypotheses falls below a critical threshold (diff < 0.1), it automatically triggers an extended validation subroutine.
+
 Local LLM Integration: Formulates context-aware evaluation prompts and pushes raw, chronological syslog streams to a local Gemma 3 model using the Ollama API, bypassing rigid rules for deep anomaly resolution.
 
 # Decision Engine
@@ -42,8 +53,11 @@ The final verification and reporting node within the pipeline, acting as the qua
 
 Responsibilities:
 Risk Assessment & Classification: Evaluates adjusted confidence margins and maps processed cases into clear priority bands (LOW, MEDIUM, HIGH).
+
 Hallucination & Bias Mitigation: Audits AI-generated suggestions against validated facts cached in Redis, applying penalization weights to the score if conflicting claims are detected.
+
 Dead-Letter Queue (DLQ) Management: Safely routes malformed messages or unverified pipeline states into an isolated topic (dead-letter-topic) for manual review.
+
 Narrative Generation: Compiles verified facts and analytical traces into a comprehensive, markdown-formatted formal incident report (ir_report.md).
 
 Data Flow
