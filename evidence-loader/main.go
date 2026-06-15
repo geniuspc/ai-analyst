@@ -25,18 +25,28 @@ import (
 )
 
 func main() {
+	brokerAddress := os.Getenv("KAFKA_BROKERS")
+	if brokerAddress == "" {
+		brokerAddress = "localhost:9092"
+	}
+
+	redisAddress := os.Getenv("REDIS_ADDR")
+	if redisAddress == "" {
+		redisAddress = "localhost:6379"
+	}
+
 	topic := "evidence-ready"
-	brokerAdress := "localhost:9092"
 	writer := &kafka.Writer{
-		Addr:         kafka.TCP(brokerAdress),
+		Addr:         kafka.TCP(brokerAddress), 
 		Topic:        topic,
 		Balancer:     &kafka.LeastBytes{},
 		MaxAttempts:  3,
 		WriteTimeout: 10 * time.Second,
 	}
 	defer writer.Close()
+
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddress,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

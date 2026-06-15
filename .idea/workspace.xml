@@ -5,17 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ae13a101-597b-460b-b6ac-759f59ab5639" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/decision_engine/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evidence-loader/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orchestrator/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vol3-service/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/func.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/func.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/models.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/models.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/prompts/mcp_tool_orchestator" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/mcp_tool_orchestator" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/prompts/report_writer" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/report_writer" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orchestator/prompts/timeline_analyst.tmpl" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/timeline_analyst.tmpl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/decision_engine/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/decision_engine/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evidence-loader/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/evidence-loader/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestrator/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vol3-service/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/vol3-service/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vol3-service/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/vol3-service/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -20,20 +20,23 @@ import (
 var rdb *redis.Client
 
 func initRedis() {
+	addr := getEnv("REDIS_ADDR", "localhost:6379")
 	rdb = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: addr,
 	})
 }
 func main() {
 	initRedis()
+	kafkaBroker := getEnv("KAFKA_BROKERS", "localhost:9092")
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
+		Brokers: []string{kafkaBroker},
 		GroupID: "be1-orchestrator",
 		Topic:   "ml1-scored",
 	})
 	defer reader.Close()
+
 	writer := &kafka.Writer{
-		Addr:     kafka.TCP("localhost:9092"),
+		Addr:     kafka.TCP(kafkaBroker),
 		Topic:    "agent-findings",
 		Balancer: &kafka.LeastBytes{},
 	}
@@ -470,4 +473,11 @@ func GenerateFinalReportGemma(ctx context.Context, data ReportData) (string, err
 	userPrompt := fmt.Sprintf(
 		"Based on logs %s\n.Generate a formal Incident Response Report in Markdown format based on the following verified telemetry in file: %s\n", finalLogJson, string(filebytes))
 
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }

@@ -5,27 +5,29 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
-	"golang.org/x/net/context"
 )
 
 var rdb *redis.Client
 
 func initRedis() {
+	addr := getEnv("REDIS_ADDR", "localhost:6379")
 	rdb = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: addr,
 	})
 }
 
 func main() {
 	initRedis()
+	kafkaBroker := getEnv("KAFKA_BROKERS", "localhost:9092")
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
+		Brokers: []string{kafkaBroker}, //
 		GroupID: "vol3-service",
 		Topic:   "evidence-ready",
 	})
@@ -128,4 +130,11 @@ func (e *ThreadPoolExecutor) Submit(task Task) {
 func (e *ThreadPoolExecutor) Shutdown() {
 	close(e.taskQueue)
 	e.wg.Wait()
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }

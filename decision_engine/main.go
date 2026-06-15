@@ -16,20 +16,23 @@ import (
 var rdb *redis.Client
 
 func initRedis() {
+	addr := getEnv("REDIS_ADDR", "localhost:6379")
 	rdb = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: addr,
 	})
 }
 func main() {
 	initRedis()
+	kafkaBroker := getEnv("KAFKA_BROKERS", "localhost:9092")
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
+		Brokers: []string{kafkaBroker},
 		GroupID: "be1-decision-engine",
 		Topic:   "ml2-verified-findings",
 	})
 	defer reader.Close()
+
 	dlWriter := &kafka.Writer{
-		Addr:     kafka.TCP("localhost:9092"),
+		Addr:     kafka.TCP(kafkaBroker),
 		Topic:    "dead-letter-topic",
 		Balancer: &kafka.LeastBytes{},
 	}
@@ -135,4 +138,11 @@ func saveStatusToRedis(caseID string, risk string, ts string) {
 		log.Printf("Saved to Redis for: %s", caseID)
 	}
 
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }
