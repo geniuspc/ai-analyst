@@ -163,7 +163,6 @@ If you need to run services locally (without Docker) or change ports, use the fo
 REDIS_ADDR Redis connection address: localhost:6379
 KAFKA_BROKERS Redpanda/Kafka broker address: localhost:9092
 
-## Dataset documentation
 ## Dataset & Test Artifacts Documentation
 
 Since Project Iron Hand is an infrastructure-driven DFIR platform rather than a static model-training script, it does not include a built-in training dataset. Instead, the pipeline operates on raw forensic evidence images.
