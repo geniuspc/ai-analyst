@@ -7,6 +7,35 @@ Modern digital forensics investigations produce overwhelming volumes of telemetr
 Project Iron Hand automates these stages by consolidating industry-standard forensic engines (Volatility 3) and advanced machine learning models into an autonomous, event-driven pipeline.
 ## Architecture & Core Modules
 The platform is engineered as a decoupled microservices architecture. All components remain completely isolated and communicate asynchronously using a high-performance message broker (Redpanda) and a shared state store (Redis).
+### System Architecture Diagram
+
+```mermaid
+graph TD
+    User[Analyst / Client] -->|POST /upload| EL[Evidence Loader BE2]
+    
+    subgraph Infrastructure_Cluster [Docker Compose Network]
+        EL -->|1. Store Checksum| Redis[(Redis State & Cache)]
+        EL -->|2. Trigger Event| RP[Redpanda / Kafka Broker]
+        
+        RP -->|Listen: evidence-ready| VS[Vol3-Service]
+        VS -->|3. Execute Tasks concurrently| TP[Thread Pool]
+        TP -->|4. Run Volatility3 Plugins| VolCore[Volatility 3 Engine]
+        VolCore -->|5. Cache JSON Results| Redis
+        
+        RP -->|Listen: evidence-ready| Orch[Orchestrator BE1]
+        Redis -->|6. Fetch Forensic Telemetry| Orch
+        Orchestrator -->|7. Rule Scoring| Orch
+        
+        Orchestrator -->|8. Low Diff Uncertainty| Gemma[Gemma 3 via Ollama API]
+        Gemma -->|9. Timeline Analysis| Orchestrator
+        
+        Orchestrator -->|10. Push Findings| RP
+        RP -->|Listen: agent-findings| DE[Decision Engine]
+        
+        DE -->|11. Verify Facts & Risk Audit| DE
+        DE -->|12. Write Deliverables| Out[/Local Host: ./output/]
+    end
+```
 # Evidence Loader (BE2)
 The ingestion gateway of the platform, responsible for secure artifact reception, metadata extraction, and initial pipeline triggering.
 - Responsibilities:
@@ -133,5 +162,21 @@ Decision Engine generates the final ir_report.md and saves it to the output/ fol
 If you need to run services locally (without Docker) or change ports, use the following variables:
 REDIS_ADDR Redis connection address: localhost:6379
 KAFKA_BROKERS Redpanda/Kafka broker address: localhost:9092
+
+## Dataset documentation
+## Dataset & Test Artifacts Documentation
+
+Since Project Iron Hand is an infrastructure-driven DFIR platform rather than a static model-training script, it does not include a built-in training dataset. Instead, the pipeline operates on raw forensic evidence images.
+
+### Reference Test Samples
+For validation and integration testing, you can utilize standard publicly available forensic corpora:
+1. **Volatility 3 Linux Profiles & Samples:** Official [Volatility Foundation](https://github.com/volatilityfoundation/volatility3) test dumps.
+2. **SANS DFIR Challenge Images:** Standard memory captures featuring realistic rootkit deployments and lateral movement traces.
+
+### Simulated Attack Vectors (Artifact Scheme)
+To test the rule-based scoring and Gemma 3 self-correction, input artifacts should ideally contain telemetry reflecting the following signatures:
+**Rootkit Vector:** Unbacked memory pages (detected via `malfind`), hidden PIDs, or unlinked kernel modules (`lsmod` vs `sysfs` mismatch).
+**Log Tampering Vector:** Missing syslog spans, clearing of `auth.log`, or presence of string indicators like `promiscuous mode`, `segfault`, or unauthorized `sudo` executions.
+
 
 
