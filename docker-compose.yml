@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command: ["redpanda", "start", "--overprovisioned", "--node-id 0"]
+
+  be2-loader:
+    build: {context: ., dockerfile: ./evidence-loader/Dockerfile}
+    depends_on: [redis, redpanda]
+
+  be1-orchestrator:
+    build: {context: ., dockerfile: ./orchestrator/Dockerfile}
+    depends_on: [be2-loader]
+
+  vol3-service:
+    build: {context: ., dockerfile: ./vol3-service/Dockerfile}
+    depends_on: [redpanda]

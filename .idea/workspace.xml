@@ -4,7 +4,19 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ae13a101-597b-460b-b6ac-759f59ab5639" name="Changes" comment="" />
+    <list default="true" id="ae13a101-597b-460b-b6ac-759f59ab5639" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/decision_engine/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evidence-loader/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orchestrator/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/vol3-service/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/func.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/func.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/models.go" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/models.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/prompts/mcp_tool_orchestator" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/mcp_tool_orchestator" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/prompts/report_writer" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/report_writer" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orchestator/prompts/timeline_analyst.tmpl" beforeDir="false" afterPath="$PROJECT_DIR$/orchestrator/prompts/timeline_analyst.tmpl" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -19,26 +31,26 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "geniuspc"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;geniuspc&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/geniuspc/ai-analyst.git",
-    "accountId": "ca7a029f-bb7c-4758-b70c-61174967c4e2"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/geniuspc/ai-analyst.git&quot;,
+    &quot;accountId&quot;: &quot;ca7a029f-bb7c-4758-b70c-61174967c4e2&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6,
-  "fromUser": false
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3ExEo1pJvHD6fyERL10m7zz03Mq" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -58,16 +70,27 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "backend-orchestrator",
+    "git-widget-placeholder": "main",
     "go.sdk.automatically.set": "true",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/Users/arseniy",
+    "last_opened_file_path": "/Users/arseniy/Documents/GitHub/ai-analyst/vol3-service",
     "node.js.detected.package.eslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/vol3-service" />
+      <recent name="$PROJECT_DIR$/evidence-loader" />
+      <recent name="$PROJECT_DIR$/decision_engine" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/orchestator" />
+      <recent name="$PROJECT_DIR$/vol3-service" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
