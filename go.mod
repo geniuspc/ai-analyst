@@ -1,4 +1,4 @@
-module iron-hand
+module ai-analyst
 
 go 1.26.2
 
@@ -8,7 +8,6 @@ require (
 	github.com/ollama/ollama v0.30.6
 	github.com/redis/go-redis/v9 v9.20.0
 	github.com/segmentio/kafka-go v0.4.51
-	golang.org/x/net v0.46.0
 	golang.org/x/sync v0.20.0
 )
 

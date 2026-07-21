@@ -1,5 +1,10 @@
 package main
 
+import (
+	"sync"
+	"time"
+)
+
 type ArtifactFiles struct {
 	Memory string   `json:"memory"`
 	Logs   []string `json:"logs"`
