@@ -1,4 +1,4 @@
-package main
+package models
 
 type Reference struct {
 	Claim      string `json:"claim"`

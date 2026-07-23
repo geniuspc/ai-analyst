@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ai-analyst/vol3-service/internal/models"
 	"context"
 	"fmt"
 	"log"
@@ -35,7 +36,7 @@ func main() {
 
 		fmt.Printf("Received message: %s\n", string(msgKafka.Value))
 
-		var msg worker.EvidenceMsg
+		var msg models.EvidenceMsg
 		if err := json.Unmarshal(msgKafka.Value, &msg); err != nil {
 			log.Println("Error unmarshalling message:", err)
 			continue

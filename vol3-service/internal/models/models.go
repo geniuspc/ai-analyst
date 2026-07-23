@@ -1,7 +1,6 @@
-package main
+package models
 
 import (
-	"sync"
 	"time"
 )
 
@@ -20,11 +19,4 @@ type EvidenceMsg struct {
 	CheckSum      string        `json:"checksum"`
 	Files         ArtifactFiles `json:"files"`
 	Timestamp     time.Time     `json:"ts"`
-}
-
-type Task func()
-
-type ThreadPoolExecutor struct {
-	taskQueue chan Task
-	wg        sync.WaitGroup
 }
