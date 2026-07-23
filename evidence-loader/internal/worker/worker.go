@@ -1,4 +1,4 @@
-package main
+package worker
 
 import (
 	"bufio"
@@ -19,52 +19,14 @@ import (
 	"strings"
 	"time"
 
+	"ai-analyst/evidence-loader/internal/models"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
 
-func main() {
-	brokerAddress := os.Getenv("KAFKA_BROKERS")
-	if brokerAddress == "" {
-		brokerAddress = "localhost:9092"
-	}
-
-	redisAddress := os.Getenv("REDIS_ADDR")
-	if redisAddress == "" {
-		redisAddress = "localhost:6379"
-	}
-
-	topic := "evidence-ready"
-	writer := &kafka.Writer{
-		Addr:         kafka.TCP(brokerAddress), 
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		MaxAttempts:  3,
-		WriteTimeout: 10 * time.Second,
-	}
-	defer writer.Close()
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr: redisAddress,
-	})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		fmt.Printf("redis is unavailable: %v\n", err)
-		os.Exit(1)
-	}
-	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
-		multiPartUploader(w, r, rdb, writer)
-	})
-	fmt.Println("Listening on port 8080")
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		return
-	}
-}
-
-func multiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client, writer *kafka.Writer) {
+func MultiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client, writer *kafka.Writer) {
 	r.Body = http.MaxBytesReader(w, r.Body, 20<<30)
 	reader, err := r.MultipartReader()
 	if err != nil {
@@ -72,10 +34,10 @@ func multiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client
 		return
 	}
 	caseID := uuid.NewString()
-	baseDir := "/evidence/" + caseID + "/raw/"
+	baseDir := filepath.Join("/evidence", caseID, "raw")
 	err = os.MkdirAll(baseDir, 0755)
 	if err != nil {
-		http.Error(w, "error creating evidence directory: %v", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("error creating evidence directory: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -89,7 +51,7 @@ func multiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client
 		if err != nil {
 			var maxBytesErr *http.MaxBytesError
 			if errors.As(err, &maxBytesErr) {
-				os.RemoveAll("/evidence/" + caseID)
+				os.RemoveAll(filepath.Join("/evidence", caseID))
 				http.Error(w, "File too large (Max 20 GB)", http.StatusRequestEntityTooLarge)
 				return
 			}
@@ -102,18 +64,24 @@ func multiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client
 			originalFileName = filepath.Base(part.FileName())
 			tempFilePath = filepath.Join(baseDir, originalFileName)
 			fmt.Printf("Processing file %s\n", part.FileName())
+
 			f, err := os.Create(tempFilePath)
 			if err != nil {
-				os.RemoveAll("/evidence/" + caseID)
+				os.RemoveAll(filepath.Join("/evidence", caseID))
 				http.Error(w, "error creating file", http.StatusInternalServerError)
 				return
 			}
-			_, err = io.Copy(f, part)
-			f.Close()
+			_, copyErr := io.Copy(f, part)
+			closeErr := f.Close()
 			part.Close()
-			if err != nil {
+			if copyErr != nil {
 				os.RemoveAll(baseDir)
 				http.Error(w, "copy error", http.StatusInternalServerError)
+				return
+			}
+			if closeErr != nil {
+				os.RemoveAll(baseDir)
+				http.Error(w, "error closing file", http.StatusInternalServerError)
 				return
 			}
 		} else {
@@ -125,9 +93,9 @@ func multiPartUploader(w http.ResponseWriter, r *http.Request, rdb *redis.Client
 		http.Error(w, "No file uploaded", http.StatusBadRequest)
 		return
 	}
-	artifactType, _, err := evaluatePipeline(r.Context(), caseID, tempFilePath, originalFileName, rdb, writer)
+	artifactType, _, err := EvaluatePipeline(r.Context(), caseID, tempFilePath, originalFileName, rdb, writer)
 	if err != nil {
-		os.RemoveAll("/evidence/" + caseID)
+		os.RemoveAll(filepath.Join("/evidence", caseID))
 		if strings.Contains(err.Error(), "broker failure") {
 			http.Error(w, "Service unavailable: Redpanda error", http.StatusServiceUnavailable)
 		} else if strings.Contains(err.Error(), "unknown artifact") {
@@ -182,25 +150,25 @@ func CalcucateEntropy(filePath string) (float64, error) {
 	return entropy, nil
 }
 
-func evaluatePipeline(ctx context.Context, caseID string, tempFilePath string, originalFileName string, rdb *redis.Client, writer *kafka.Writer) (string, string, error) {
-	artifactType, err := detectArtifact(tempFilePath)
+func EvaluatePipeline(ctx context.Context, caseID string, tempFilePath string, originalFileName string, rdb *redis.Client, writer *kafka.Writer) (string, string, error) {
+	artifactType, err := DetectArtifact(tempFilePath)
 	if err != nil {
-		return "", "", fmt.Errorf("error detecting artifact type: %v", err)
+		return "", "", fmt.Errorf("error detecting artifact type: %w", err)
 	}
-	finalPath, err := mountArtifact(caseID, tempFilePath, artifactType, originalFileName)
+	finalPath, err := MountArtifact(caseID, tempFilePath, artifactType, originalFileName)
 	if err != nil {
-		return "", "", fmt.Errorf("error mounting artifact: %v", err)
+		return "", "", fmt.Errorf("error mounting artifact: %w", err)
 	}
-	isValid, err := fileValidation(ctx, artifactType, filepath.Base(finalPath), finalPath)
+	isValid, err := FileValidation(ctx, artifactType, filepath.Base(finalPath), finalPath)
 	if err != nil || !isValid {
 		if err != nil {
 			return "", "", fmt.Errorf("validation failed: %w", err)
 		}
 		return "", "", fmt.Errorf("file is invalid")
 	}
-	sumSHA, err := calculateSHA(finalPath)
+	sumSHA, err := CalculateSHA(finalPath)
 	if err != nil {
-		return "", "", fmt.Errorf("error calculating SHA: %v", err)
+		return "", "", fmt.Errorf("error calculating SHA: %w", err)
 	}
 	checkSumKey := fmt.Sprintf("artifact:%s:checksum", caseID)
 	sumValue := fmt.Sprintf("sha256:%s", sumSHA)
@@ -209,20 +177,20 @@ func evaluatePipeline(ctx context.Context, caseID string, tempFilePath string, o
 		return "", "", fmt.Errorf("redis error setting checksum: %w", err)
 	}
 	pipelineKey := fmt.Sprintf("pipeline:%s:state", caseID)
-	pipelineState := PipelineStatus{
+	pipelineState := models.PipelineStatus{
 		Step:      "be2_complete",
 		Status:    "ready",
 		Timestamp: time.Now(),
 	}
 	stateJson, err := json.Marshal(pipelineState)
 	if err != nil {
-		return "", "", fmt.Errorf("error marshaling pipelineState: %v", err)
+		return "", "", fmt.Errorf("error marshaling pipelineState: %w", err)
 	}
 	err = rdb.Set(ctx, pipelineKey, stateJson, 24*time.Hour).Err()
 	if err != nil {
 		return "", "", fmt.Errorf("redis error pipelineState: %w", err)
 	}
-	jsonStr, err := resultTopic(caseID, artifactType, finalPath, "ready", sumSHA)
+	jsonStr, err := ResultTopic(caseID, artifactType, finalPath, "ready", sumSHA)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating JSON: %w", err)
 	}
@@ -232,12 +200,12 @@ func evaluatePipeline(ctx context.Context, caseID string, tempFilePath string, o
 	}
 	err = writer.WriteMessages(ctx, message)
 	if err != nil {
-		fmt.Printf("error occurred during sending message: %w", err)
+		fmt.Printf("error occurred during sending message: %v\n", err)
 	}
 	log.Println("Successfully sent message to Redpanda")
 	return artifactType, sumSHA, nil
 }
-func detectArtifact(filePath string) (string, error) {
+func DetectArtifact(filePath string) (string, error) {
 	name := strings.ToLower(filepath.Base(filePath))
 	switch {
 	case strings.HasSuffix(name, ".raw") || strings.HasSuffix(name, ".mem"):
@@ -247,6 +215,7 @@ func detectArtifact(filePath string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error opening file: %w", err)
 		}
+		defer file.Close()
 		buf := make([]byte, 4)
 		_, err = file.Read(buf)
 		if err != nil && err != io.EOF {
@@ -271,7 +240,7 @@ func detectArtifact(filePath string) (string, error) {
 			return "", fmt.Errorf("error calculating entropy for %s: %w", filePath, err)
 		}
 		if entropy < 6.5 {
-			return "", fmt.Errorf("file entropy is too small: %.2f\n. It is likely it's not a memory dump", entropy)
+			return "", fmt.Errorf("file entropy is too small: %.2f. It is likely not a memory dump", entropy)
 		}
 		return "memory", nil
 	case strings.HasSuffix(name, ".log") || name == "auth.log" || name == "syslog" || name == "kern.log" || name == "audit.log":
@@ -305,7 +274,7 @@ func detectArtifact(filePath string) (string, error) {
 	return "", fmt.Errorf("unknown artifact type")
 }
 
-func mountArtifact(caseID string, tempFilePath string, artifactType string, name string) (string, error) {
+func MountArtifact(caseID string, tempFilePath string, artifactType string, name string) (string, error) {
 	baseDir := filepath.Join("/evidence", caseID)
 	var finalPath string
 	if artifactType == "memory" {
@@ -322,11 +291,11 @@ func mountArtifact(caseID string, tempFilePath string, artifactType string, name
 	if err := os.Rename(tempFilePath, finalPath); err != nil {
 		return "", fmt.Errorf("error moving temporary file %s to %s: %w", tempFilePath, finalPath, err)
 	}
-	os.Remove(filepath.Dir(tempFilePath))
+	os.RemoveAll(filepath.Dir(tempFilePath))
 	return finalPath, nil
 }
 
-func fileValidation(ctx context.Context, artifactType string, name string, filePath string) (bool, error) {
+func FileValidation(ctx context.Context, artifactType string, name string, filePath string) (bool, error) {
 	if artifactType == "memory" {
 		cmd := exec.CommandContext(ctx, "python3", "vol.py", "-f", filePath, "banners")
 		out, err := cmd.Output()
@@ -348,12 +317,10 @@ func fileValidation(ctx context.Context, artifactType string, name string, fileP
 		if name == "auth.log" || name == "syslog" || name == "kern.log" {
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				fmt.Println("error checking logs directory", err)
-				return false, nil
+				return false, fmt.Errorf("error checking file stats: %w", err)
 			}
 			if fileInfo.Size() == 0 {
-				fmt.Printf("File %s is empty\n", filePath)
-				return false, nil
+				return false, fmt.Errorf("file %s is empty", filePath)
 			}
 			count := 0
 			for scanner.Scan() {
@@ -363,12 +330,11 @@ func fileValidation(ctx context.Context, artifactType string, name string, fileP
 				fmt.Println("error scanning file", err)
 			}
 			if count < 10 {
-				fmt.Printf("File %s is too small\n", filePath)
-				return false, nil
-			} else if count >= 10 {
-				return true, nil
+				return false, fmt.Errorf("file %s has less than 10 lines", filePath)
 			}
+			return true, nil
 		}
+
 		if name == "audit.log" {
 			for scanner.Scan() {
 				line := scanner.Text()
@@ -376,11 +342,12 @@ func fileValidation(ctx context.Context, artifactType string, name string, fileP
 					return true, nil
 				}
 			}
+			return false, fmt.Errorf("audit.log does not contain required SYSCALL or USER_LOGIN records")
 		}
 		if name == "journald" || name == "journald.json" || strings.HasSuffix(name, ".json") {
 			jsonFile, err := os.ReadFile(filePath)
 			if err != nil {
-				return false, fmt.Errorf("error unmarshalling file: %w", err)
+				return false, fmt.Errorf("error reading file: %w", err)
 			}
 			if !json.Valid(jsonFile) {
 				return false, fmt.Errorf("invalid json file")
@@ -394,30 +361,30 @@ func fileValidation(ctx context.Context, artifactType string, name string, fileP
 	return false, nil
 }
 
-func calculateSHA(finalPath string) (string, error) {
+func CalculateSHA(finalPath string) (string, error) {
 	file, err := os.Open(finalPath)
 	if err != nil {
-		return "", fmt.Errorf("error opening file: %v", err)
+		return "", fmt.Errorf("error opening file: %w", err)
 	}
 	defer file.Close()
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
-		return "", fmt.Errorf("error hashing file: %v", err)
+		return "", fmt.Errorf("error hashing file: %w", err)
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func resultTopic(caseID string, artifactType string, filePath string, status string, sumSHA string) (string, error) {
+func ResultTopic(caseID string, artifactType string, filePath string, status string, sumSHA string) (string, error) {
 	osType := "linux"
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error getting information about file: %w", err)
 	}
 	sizeBytes := fileInfo.Size()
-	var evidenceFile EvidenceMeta
-	switch {
-	case artifactType == "memory":
-		evidenceFile = EvidenceMeta{
+	var evidenceFile models.EvidenceMeta
+	switch artifactType {
+	case "memory":
+		evidenceFile = models.EvidenceMeta{
 			CaseID:        caseID,
 			ArtifactType:  artifactType,
 			MountPath:     filePath,
@@ -425,13 +392,13 @@ func resultTopic(caseID string, artifactType string, filePath string, status str
 			ByteSize:      sizeBytes,
 			Vol3Readiness: true,
 			CheckSum:      sumSHA,
-			Files: ArtifactFiles{
+			Files: models.ArtifactFiles{
 				Memory: filePath,
 			},
 			Timestamp: time.Now().UTC(),
 		}
-	case artifactType == "logs":
-		evidenceFile = EvidenceMeta{
+	case "logs":
+		evidenceFile = models.EvidenceMeta{
 			CaseID:        caseID,
 			ArtifactType:  artifactType,
 			MountPath:     filePath,
@@ -439,7 +406,7 @@ func resultTopic(caseID string, artifactType string, filePath string, status str
 			ByteSize:      sizeBytes,
 			Vol3Readiness: false,
 			CheckSum:      sumSHA,
-			Files: ArtifactFiles{
+			Files: models.ArtifactFiles{
 				Logs: []string{filePath},
 			},
 			Timestamp: time.Now().UTC(),
